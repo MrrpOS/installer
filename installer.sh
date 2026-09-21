@@ -160,11 +160,7 @@ set root=(hd0,1)
 set gfxpayload=1024x768x32
 
 menuentry "MrrpOS 2026.1 (minimrrp), Linux 6.18.10-lfs-13.0-systemd" {
-        linux   /boot/vmlinuz-6.18.10-lfs-13.0-systemd $ROOT_PARAM rootdelay=10 rw quiet drm.panic_bg_color=0x3d007a drm.panic_fg_color=0xffffff
-}
-
-menuentry "MrrpOS 2026.1 (minimrrp), Linux 6.18.10-lfs-13.0-systemd (Recovery Mode)" {
-        linux   /boot/vmlinuz-6.18.10-lfs-13.0-systemd $ROOT_PARAM rootdelay=10 rw drm.panic_bg_color=0x3d007a drm.panic_fg_color=0xffffff
+        linux   /boot/vmlinuz-6.18.10-lfs-13.0-systemd $ROOT_PARAM rootdelay=5 rw systemd.show_status=1 drm.panic_bg_color=0x3d007a drm.panic_fg_color=0xffffff
 }
 EOF
 
