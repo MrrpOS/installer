@@ -3,7 +3,7 @@
 set -e
 
 echo "+-----------------------+"
-echo "| MrrpOS Installer v1.0 |"
+echo "| MrrpOS Installer v1.1 |"
 echo "+-----------------------+"
 
 echo ""
@@ -125,6 +125,58 @@ if [ $TAR_EXIT -ne 0 ]; then
     echo "OH NO! Extraction failed with exit code $TAR_EXIT."
     exit 1
 fi
+
+echo "Performing target post-install cleanup..."
+rm -rf "$MOUNT_POINT"/tmp/* 2>/dev/null || true
+rm -rf "$MOUNT_POINT"/usr/lib/firmware/* 2>/dev/null || true
+rm -rf "$MOUNT_POINT"/sources/* 2>/dev/null || true
+
+echo "Fetching your PARTUUID for $TARGET_DEV..."
+TARGET_PARTUUID=$(blkid -s PARTUUID -o value "$TARGET_DEV")
+
+if [ -z "$TARGET_PARTUUID" ]; then
+    echo "Hey, so... could not fetch PARTUUID for your $TARGET_DEV device. Falling back to device path."
+    ROOT_PARAM="root=$TARGET_DEV"
+    FSTAB_ROOT="$TARGET_DEV"
+    echo "This might get messy later on a different configuration of devices and ports."
+else
+    echo "Found PARTUUID: $TARGET_PARTUUID"
+    ROOT_PARAM="root=PARTUUID=$TARGET_PARTUUID"
+    FSTAB_ROOT="PARTUUID=$TARGET_PARTUUID"
+fi
+
+echo "Overwriting /boot/grub/grub.cfg on target partition..."
+mkdir -p "$MOUNT_POINT/boot/grub"
+
+cat > "$MOUNT_POINT/boot/grub/grub.cfg" << EOF
+# Begin /boot/grub/grub.cfg
+set default=0
+set timeout=5
+
+insmod part_msdos
+insmod part_gpt
+insmod ext2
+set root=(hd0,1)
+set gfxpayload=1024x768x32
+
+menuentry "MrrpOS 2026.1 (minimrrp), Linux 6.18.10-lfs-13.0-systemd" {
+        linux   /boot/vmlinuz-6.18.10-lfs-13.0-systemd $ROOT_PARAM rootdelay=10 rw quiet drm.panic_bg_color=0x3d007a drm.panic_fg_color=0xffffff
+}
+
+menuentry "MrrpOS 2026.1 (minimrrp), Linux 6.18.10-lfs-13.0-systemd (Recovery Mode)" {
+        linux   /boot/vmlinuz-6.18.10-lfs-13.0-systemd $ROOT_PARAM rootdelay=10 rw drm.panic_bg_color=0x3d007a drm.panic_fg_color=0xffffff
+}
+EOF
+
+echo "Writing /etc/fstab on target partition..."
+mkdir -p "$MOUNT_POINT/etc"
+
+cat > "$MOUNT_POINT/etc/fstab" << EOF
+# /etc/fstab: static file system information for MrrpOS
+# <file system>             <mount point>   <type>      <options>               <dump>  <pass>
+$FSTAB_ROOT               /               ext4        noatime,errors=remount-ro 0       1
+tmpfs                       /tmp            tmpfs       nosuid,nodev            0       0
+EOF
 
 echo ""
 echo "Congratulations! MrrpOS was successfully installed onto your device."
